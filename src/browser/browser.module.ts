@@ -20,6 +20,13 @@ export class BrowserModule {
       providers: this.createProviders(options),
     };
   }
+  static registerGlobal(options: BrowserOptions): DynamicModule {
+    return {
+      global:true,
+      module: BrowserModule,
+      providers: this.createProviders(options),
+    };
+  }
   static createProviders(options: BrowserOptions): Provider<any>[] {
     return [
       {

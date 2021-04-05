@@ -87,7 +87,6 @@ export class Browser {
       url: 'https://google.com',
       isRaw: false,
     });
-    await page.close();
     this.browser.on('disconnected', async () => {
       // this.redis.decr('instance');
       this.state = 'disconnected';
@@ -229,7 +228,7 @@ export class Browser {
     this.logger.debug(`screenshoot ${path}`);
     await page.screenshot({ path: path });
   }
-  async createPage() {
+  async createPage() : Promise<puppeteer.Page> {
     if (this.state != 'connected') {
       await new Promise(res => setTimeout(res, 1000 * 40));
       return this.createPage();
