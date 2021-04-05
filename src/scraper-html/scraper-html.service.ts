@@ -132,7 +132,7 @@ export class ScraperHtmlService {
       return (
         it.folder.startsWith('/Browsers - ') &&
         it.browserName === 'Chrome' &&
-        Number(it.browserMajor) > 50
+        Number(it.browserMajor) > 70
       );
     });
     const resHtml = await this.httpService
