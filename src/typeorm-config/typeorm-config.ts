@@ -34,7 +34,6 @@ export class TypeOrmConfig implements TypeOrmOptionsFactory {
       },
       autoLoadEntities: true,
     } as MysqlConnectionOptions;
-    Logger.log(config)
     return config;
   }
 }

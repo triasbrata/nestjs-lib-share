@@ -7,9 +7,6 @@ import {
   Inject,
   Injectable,
   Logger,
-  OnApplicationBootstrap,
-  OnApplicationShutdown,
-  OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { LaunchOptions, Browser as ChromeBrowser } from 'puppeteer';
@@ -61,7 +58,7 @@ export class Browser {
       await new Promise(res => setTimeout(res, 1000 * 10));
       return this.launchBrowser();
     }
-
+    const port = 8000 + Number((process.env.pm_id || 0));
     const args = [
       '--window-size=1280x720',
       '--disable-dev-shm-usage',
@@ -74,7 +71,13 @@ export class Browser {
       '--no-zygote',
       '--disable-gpu',
       '--disable-accelerated-2d-canvas',
+      `--remote-debugging-port=${port}`,
+      '--disable-web-security'
     ];
+    const proxyServer = this.config.get('PROXY_SERVER');
+    if (proxyServer){
+      args.push('--proxy-server='+proxyServer)
+    }
     const options = {
       defaultViewport: null,
       ignoreHTTPSErrors: true,
@@ -237,6 +240,11 @@ export class Browser {
     [page] = await this.browser.pages();
     if (!page || (page && page.url() !== 'about:blank')) {
       page = await this.browser.newPage();
+    }
+    const userAuth = this.config.get('PROXY_USER');
+    const passAuth = this.config.get('PROXY_PASS');
+    if(userAuth && passAuth){
+      await page.authenticate({username: userAuth, password: passAuth});
     }
     return page;
   }
