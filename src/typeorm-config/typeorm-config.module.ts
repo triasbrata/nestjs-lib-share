@@ -6,11 +6,12 @@ import { TypeOrmConfig } from './typeorm-config';
   providers:[TypeOrmConfig],
 })
 export class TypeormConfigModule {
-  static register(maxConLimit = 5):DynamicModule{
+  static register(maxConLimit = 5, defaultConfig= 'database'):DynamicModule{
     return {
       module: TypeormConfigModule,
       providers:[
         {provide:'maxConLimit', useValue:maxConLimit},
+        {provide:'defaultConfig', useValue:defaultConfig},
       ]
     }
   }
