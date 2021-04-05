@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Browser, firefox } from 'playwright';
+import { Browser, firefox, LaunchOptions } from 'playwright';
 
 @Injectable()
 export class PlaywrightService implements OnApplicationBootstrap, OnModuleInit{
@@ -10,7 +10,18 @@ export class PlaywrightService implements OnApplicationBootstrap, OnModuleInit{
 
   }
   async onModuleInit() {
-    this.browser = await firefox.launch({ headless: this.config.get('HEADLESS', 'true') === "true" });
+    const optionLaunch:LaunchOptions = { headless: this.config.get('HEADLESS', 'true') === "true" };
+    const proxyServer = this.config.get('PROXY_SERVER');
+    const proxyUser = this.config.get('PROXY_USER');
+    const proxyPass = this.config.get('PROXY_PASS');
+    if(proxyServer){
+      optionLaunch.proxy = {server:proxyServer}
+    }
+    if(proxyServer && proxyPass && proxyUser){
+      optionLaunch.proxy.password = proxyPass;
+      optionLaunch.proxy.username = proxyUser;
+    }
+    this.browser = await firefox.launch(optionLaunch);
   }
   
   async onApplicationBootstrap() {
