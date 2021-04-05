@@ -21,13 +21,16 @@ export class PlaywrightService implements OnApplicationBootstrap, OnModuleInit{
       optionLaunch.proxy.password = proxyPass;
       optionLaunch.proxy.username = proxyUser;
     }
+    this.logger.debug('launching firefox')
     this.browser = await firefox.launch(optionLaunch);
+    this.logger.debug('firefox ready')
   }
   
   async onApplicationBootstrap() {
     const page = await this.createPage();
     this.logger.debug("test open browser");
     await page.goto('https://google.com');
+    this.logger.debug('browser is ready');
 
   }
   
