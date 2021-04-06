@@ -34,6 +34,9 @@ export class TypeOrmConfig implements TypeOrmOptionsFactory {
       },
       autoLoadEntities: true,
     } as MysqlConnectionOptions;
+    if (this.config.get('NODE_ENV', 'prod') == 'dev') {
+      Logger.debug(config);
+    }
     return config;
   }
 }
