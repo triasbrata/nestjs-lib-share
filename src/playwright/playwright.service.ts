@@ -1,11 +1,13 @@
 import { Injectable, Logger, OnApplicationBootstrap, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Browser, firefox, LaunchOptions } from 'playwright';
+import { Browser, BrowserContextOptions, firefox, LaunchOptions } from 'playwright';
+import { BrowserContext } from 'playwright';
 
 @Injectable()
 export class PlaywrightService implements OnApplicationBootstrap, OnModuleInit{
-  browser: Browser;
+  private browserContext: BrowserContext;
   logger = new Logger(PlaywrightService.name);
+  private browser: Browser;
   constructor(private readonly config: ConfigService){
 
   }
@@ -25,19 +27,31 @@ export class PlaywrightService implements OnApplicationBootstrap, OnModuleInit{
     }
     this.logger.debug('launching firefox')
     this.browser = await firefox.launch(optionLaunch);
+    await this.createBrowserContex();
     this.logger.debug('firefox ready')
   }
   
+  private async createBrowserContex(context?: BrowserContextOptions) {
+    this.browserContext = await this.browser.newContext(context);
+    this.browserContext.once("close", () => {
+      this.browserContext = null;
+    })
+  }
+
   async onApplicationBootstrap() {
     const page = await this.createPage();
     this.logger.debug("test open browser");
-    await page.goto('https://google.com');
+    await page.goto('https://google.com').catch(() => process.exit());
     this.logger.debug('browser is ready');
 
   }
   
   async createPage() {
-    const page = await this.browser.newPage();
-    return page
+    if(this.browserContext){
+      const page = await this.browserContext.newPage();
+      return page
+    }
+    throw new Error("Cant create new page, coz browser context already closed");
+   
   }
 }

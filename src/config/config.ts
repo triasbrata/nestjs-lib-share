@@ -44,6 +44,17 @@ export const rmqConfig = () => {
     tcp: {
       transport: Transport.TCP,
     },
+    marketplace:{
+
+      queue: {
+        ...baseOptions,
+        options:{
+          ...baseOptions.options,
+          prefetchCount:1,
+          queue: process.env['RMQ_MARKETPLACE_QUEUE_NAME'] || "QMarketplace",
+        }
+      }
+    }
   };
 };
 export const ConfigConf = {
