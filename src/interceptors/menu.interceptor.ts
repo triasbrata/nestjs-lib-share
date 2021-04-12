@@ -35,7 +35,7 @@ export class MenuInterceptor implements NestInterceptor {
       this.reflector.get<boolean>('disableMenu', context.getHandler()) ||
       this.reflector.get<boolean>('disableMenu', context.getClass());
     const isrender = Reflect.getMetadata(RENDER_METADATA, context.getHandler());
-    if (isrender) {
+    if (isrender && !disableMenu) {
       return next.handle().pipe(
         mergeMap(async res => {
           if (typeof res !== 'object') {
