@@ -10,5 +10,7 @@ export enum Subject {
   STICKY_THREAD = "stiky_thread",
   MARKETPLACE = "marketplace",
   PRODUCT_MARKETPLACE = "product_marketplace",
-  DETAIL_PRODUCT_MARKETPLACE = "detail_product_marketplace"
+  DETAIL_PRODUCT_MARKETPLACE = "detail_product_marketplace",
+  MARKETPLACE_KEYWORDS = "marketplace_keywords",
+  KEYWORD_SEARCH = "keyword_search"
 }
