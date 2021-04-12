@@ -7,5 +7,8 @@ export enum Subject {
   SUB_FORUMS = 'sub_forums',
   SCRAPING_THREAD = 'scraping_thread',
   MEDIA = 'media',
-  STICKY_THREAD = "stiky_thread"
+  STICKY_THREAD = "stiky_thread",
+  MARKETPLACE = "marketplace",
+  PRODUCT_MARKETPLACE = "product_marketplace",
+  DETAIL_PRODUCT_MARKETPLACE = "detail_product_marketplace"
 }
