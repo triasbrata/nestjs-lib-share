@@ -14,6 +14,7 @@ export class FormatPatternPlaywrightPipe implements PipeTransform {
           newVal[type]['fields'] = [...(newVal[type]['fields'] || []), field];
         }
       }
+      newVal.useURL = newVal.useURL === 'true';
       return newVal;
     }
     return value
