@@ -15,6 +15,7 @@ export class FormatPatternPlaywrightPipe implements PipeTransform {
         }
       }
       newVal.useURL = newVal.useURL === 'true';
+      console.log(newVal);
       return newVal;
     }
     return value

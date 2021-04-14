@@ -7,4 +7,5 @@ export interface PatternPaginationField extends PatternField{
   
 }
 export interface PatternPagination extends PatternContainer<PatternPaginationField>{
+  paginationType:"pager"|"lazy";
 }
