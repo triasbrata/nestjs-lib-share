@@ -57,37 +57,42 @@ export class ScraperPlaywrightService {
       }
       const outs = [];
       for (const nodeCon of nContainers) {
-        await nodeCon.waitForElementState("stable")
-        if (options.scrollToView) {
-          await nodeCon.scrollIntoViewIfNeeded();
-        }
-        const item: Record<string, string> = await nodeCon.evaluate((node, fields: PatternField[]) =>
-          fields.reduce((item, field) =>
-            field.patterns.reduce((item, pattern) => {
-              if (!item[field.key]) {
-                if (field.patternType === "css") {
-                  if (node.querySelector(pattern)) {
-                    item[field.key] = node.querySelector(pattern);
-                  }
-                } else {
-                  const vals = document.evaluate(pattern, node, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-                  if (vals.snapshotLength > 0 && vals.snapshotItem(0)) {
-                    item[field.key] = vals.snapshotItem(0)
-                  }
-                }
-                if (field.returnType === "text" && item[field.key]) {
-                  if (field.patternType === "css") {
-                    item[field.key] = item[field.key].textContent;
-                  } else {
-                    item[field.key] = item[field.key].nodeValue;
-                  }
-                }
-              }
-              return item;
-            }, item)
-            , {})
-          , pattern.fields);
-        outs.push(item);
+        
+       try {
+         await nodeCon.waitForElementState("stable")
+         if (options.scrollToView) {
+           await nodeCon.scrollIntoViewIfNeeded();
+         }
+         const item: Record<string, string> = await nodeCon.evaluate((node, fields: PatternField[]) =>
+           fields.reduce((item, field) =>
+             field.patterns.reduce((item, pattern) => {
+               if (!item[field.key]) {
+                 if (field.patternType === "css") {
+                   if (node.querySelector(pattern)) {
+                     item[field.key] = node.querySelector(pattern);
+                   }
+                 } else {
+                   const vals = document.evaluate(pattern, node, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                   if (vals.snapshotLength > 0 && vals.snapshotItem(0)) {
+                     item[field.key] = vals.snapshotItem(0)
+                   }
+                 }
+                 if (field.returnType === "text" && item[field.key]) {
+                   if (field.patternType === "css") {
+                     item[field.key] = item[field.key].textContent;
+                   } else {
+                     item[field.key] = item[field.key].nodeValue;
+                   }
+                 }
+               }
+               return item;
+             }, item)
+             , {})
+           , pattern.fields);
+         outs.push(item);
+       } catch (error) {
+         console.error(error);
+       }
       }
       this.logger.debug({ options })
       if (options.autoClose) {
