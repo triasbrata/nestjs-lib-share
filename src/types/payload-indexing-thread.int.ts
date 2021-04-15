@@ -29,4 +29,5 @@ export class PayloadIndexingThread implements CanRecovery, ScheduledPayload {
          countryCode: string;
          timeout: number;
          engine: UseEngine;
+         force?:boolean;
        }
