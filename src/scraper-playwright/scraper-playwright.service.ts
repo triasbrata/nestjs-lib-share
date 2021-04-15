@@ -92,6 +92,7 @@ export class ScraperPlaywrightService {
          outs.push(item);
        } catch (error) {
          console.error(error);
+         break;
        }
       }
       this.logger.debug({ options })
