@@ -13,9 +13,9 @@ export class PayloadReadFullThread implements CanRecovery {
          origin: string;
          @Type(() => ForumReplyField)
          pattern: ForumReplyField[];
-         maxItteratePage: number;
+         maxItteratePage: number; // max itteration
          pageNow: number;
-         numItterate: number;
+         numItterate: number; // nummber itteration now
          mediaId: number;
          timecheck:number;
          @Type(() => ThreadEntity)
