@@ -84,7 +84,6 @@ export class ScraperWebsiteService implements OnApplicationBootstrap {
       engine == 'js'
         ? await this.scrapingReplyUseBrowser(page, pattern, url, mode)
         : await this.scraperHTML.reply(pattern, url);
-
     return [this.pipeData(reply, pattern, url), this.pipeData(pages, this.extractPageRule(pattern), url)] as [
       Record<string, any>[],
       ThreadPage<string>[],

@@ -49,6 +49,7 @@ export class ScraperHtmlService {
     resForum: Record<string, string | number>;
     pages: Record<string, any>[];
   }> {
+    const originUrl = new URL(baseURL)?.origin;
     const containerPattern = pattern.find(
       p => p.meta?.isThreadNode && !p.meta?.isPaginateNode,
     );
@@ -116,7 +117,7 @@ export class ScraperHtmlService {
               const nvalue = pnode.get(urlTextPattern[key]);
               const val =
                 key === 'url'
-                  ? new URL(this.getValue(nvalue), baseURL).toString()
+                  ? new URL(this.getValue(nvalue), originUrl).toString()
                   : this.getValue(nvalue);
               return {
                 ...pageItem,
@@ -142,7 +143,7 @@ export class ScraperHtmlService {
         },
       })
       .toPromise()
-      .catch((e) => {console.error(e)});
+      .catch((e) => {console.error(e.message, url)});
     return resHtml ? resHtml : { data: null };
   }
 
@@ -150,6 +151,7 @@ export class ScraperHtmlService {
     pattern: Partial<ForumReplyField>[],
     originUrl: string,
   ): Promise<{ reply: Record<string, any>[]; pages: ThreadPage<string>[] }> {
+    const basePathUrl = new URL(originUrl)?.origin
     //code
     const containerPattern = pattern.find(
       p => p.meta?.isContainer && !p.meta?.isPage,
@@ -196,7 +198,7 @@ export class ScraperHtmlService {
       pages = pageDom.map((cnode: libxmljs.Node & libxmljs.Document) => {
         const urlPath = this.getValue(cnode.get('./@href'));
         if (urlPath) {
-          const url = new URL(urlPath, originUrl).toString();
+          const url = new URL(urlPath, basePathUrl).toString();
           const pageTitle = this.getValue(
             cnode.get('./text()[normalize-space()]'),
           );
