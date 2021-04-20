@@ -1,6 +1,7 @@
 import {
   Inject,
   Injectable,
+  Logger,
   OnApplicationBootstrap,
 } from '@nestjs/common';
 import { evaluateSubForum } from 'apps/scraper-service/src/helpers/evaluate-sub-forum';
@@ -22,6 +23,7 @@ import { FieldForum } from '@lib/entities/entities/field-forum';
 
 @Injectable()
 export class ScraperWebsiteService implements OnApplicationBootstrap {
+  logger = new Logger(ScraperWebsiteService.name);
   constructor(
     private readonly browser: Browser,
     private readonly scraperHTML: ScraperHtmlService,

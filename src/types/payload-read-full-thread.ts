@@ -17,7 +17,7 @@ export class PayloadReadFullThread implements CanRecovery {
          pageNow: number;
          numItterate: number; // nummber itteration now
          mediaId: number;
-         timecheck:number;
+         timecheck:number; // last update pattern
          @Type(() => ThreadEntity)
          thread: Partial<ThreadEntity>;
          timeout: number;

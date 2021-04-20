@@ -1,4 +1,4 @@
-import { HttpService, Injectable } from '@nestjs/common';
+import { HttpService, Injectable, Logger } from '@nestjs/common';
 import { ForumReplyField } from '@lib/entities/entities/forum-pattern-reply.entity';
 import { ThreadPage } from '../types/thread-page.int';
 import * as parse from 'parse-key-value';
@@ -12,6 +12,7 @@ import { isEmpty } from 'class-validator';
 import * as decodeHTML from 'decode-html';
 @Injectable()
 export class ScraperHtmlService {
+  logger = new Logger(ScraperHtmlService.name);
   constructor(private readonly httpService: HttpService) {}
   getValue(n: libxmljs.Node) {
     if (isEmpty(n)) {
@@ -108,10 +109,14 @@ export class ScraperHtmlService {
       url: './@href',
       text: './text()[normalize-space()]',
     };
-    const pages = !pagePattern
-      ? []
-      : dom
-          .find(pagePattern.pattern)
+    let pages = []
+    if(pagePattern){
+      const pageContainerPatterns = [pagePattern.pattern, ...(pagePattern?.meta?.alterPattern || [])];
+      for (const pageContainerPattern of pageContainerPatterns) {
+        this.logger.debug(`try ${pageContainerPattern}`);
+        const domContens = dom
+          .find(pageContainerPattern) || [];
+        const _temp = domContens
           .map((pnode: libxmljs.Document & libxmljs.Node) =>
             Object.keys(urlTextPattern).reduce((pageItem, key) => {
               const nvalue = pnode.get(urlTextPattern[key]);
@@ -125,6 +130,12 @@ export class ScraperHtmlService {
               };
             }, {}),
           );
+        if(_temp.length > 0){
+          pages = _temp;
+          break;
+        }
+      }
+    }
     const resultOut = { pages, threads, resForum: indexRes };
     return resultOut;
   }
@@ -133,9 +144,10 @@ export class ScraperHtmlService {
       return (
         it.folder.startsWith('/Browsers - ') &&
         it.browserName === 'Chrome' &&
-        Number(it.browserMajor) > 70
+        Number(it.browserMajor) > 50
       );
     });
+    this.logger.debug(`load ${url} with ua : ${userAgent}`);
     const resHtml = await this.httpService
       .get(url, {
         headers: {
@@ -143,7 +155,6 @@ export class ScraperHtmlService {
         },
       })
       .toPromise()
-      .catch((e) => {console.error(e.message, url)});
     return resHtml ? resHtml : { data: null };
   }
 
@@ -192,22 +203,35 @@ export class ScraperHtmlService {
         }, {}),
       );
     let pages = [];
-    const pageDom = dom
-      .find(pagePattern?.pattern);
-    if(pageDom && pageDom?.length > 0){
-      pages = pageDom.map((cnode: libxmljs.Node & libxmljs.Document) => {
-        const urlPath = this.getValue(cnode.get('./@href'));
-        if (urlPath) {
-          const url = new URL(urlPath, basePathUrl).toString();
-          const pageTitle = this.getValue(
-            cnode.get('./text()[normalize-space()]'),
+    const urlTextPattern = {
+      url: './@href',
+      page: './text()[normalize-space()]',
+    };
+    if (pagePattern) {
+      const pageContainerPatterns = [pagePattern.pattern, ...(pagePattern?.meta?.alterPattern || [])];
+      for (const pageContainerPattern of pageContainerPatterns) {
+        this.logger.debug(`try ${pageContainerPattern}`);
+        const domContens = dom
+          .find(pageContainerPattern) || [];
+        const _temp = domContens
+          .map((pnode: libxmljs.Document & libxmljs.Node) =>
+            Object.keys(urlTextPattern).reduce((pageItem, key) => {
+              const nvalue = pnode.get(urlTextPattern[key]);
+              const val =
+                key === 'url'
+                  ? new URL(this.getValue(nvalue), basePathUrl).toString()
+                  : this.getValue(nvalue);
+              return {
+                ...pageItem,
+                [key]: val || null,
+              };
+            }, {}),
           );
-          return {
-            url: url,
-            page: pageTitle,
-          };
+        if (_temp.length > 0) {
+          pages = _temp;
+          break;
         }
-      });
+      }
     }
     return { reply, pages };
   }
