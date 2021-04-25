@@ -120,7 +120,7 @@ export class ScraperPlaywrightService {
     } catch (error) {
       if (page && !page.isClosed()) {
         const pathFile = resolve(`outs/fails/${cleanOrigin(page.url())}.png`);
-        await page.screenshot({ path: pathFile });
+        await page.screenshot({ path: pathFile, type:"png" });
         this.logger.debug(pathFile);
       }
       throw error;
