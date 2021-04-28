@@ -1,3 +1,4 @@
+import { Keyword } from '@lib/entities/entities/keyword.entity';
 import { Injectable, Logger } from '@nestjs/common';
 import { plainToClass } from 'class-transformer';
 import { resolve } from 'path';
@@ -21,6 +22,7 @@ export interface EvaluatePageOptions {
   searchPattern?: string;
   pageNow:number;
   searchPatternType?: "css"|"xpath";
+  waitContainer?:boolean;
 }
 export interface EvaluatePageLazyOptions extends EvaluatePageOptions{
   toPage: number,
@@ -36,6 +38,9 @@ export class ScraperPlaywrightService {
 
   async evaluateWebsite<Out extends Record<string, any> = any>({ pattern, ...options }: EvaluatePageOptions): Promise<[Out[], Page]> {
     let page: Page;
+    if(options.waitContainer === undefined){
+      options.waitContainer= true;
+    }
     try {
       if (options.url && !options.page) {
         page = await this.playwrightService.createPage();
@@ -43,21 +48,33 @@ export class ScraperPlaywrightService {
       } else {
         page = options.page;
       }
-      if (options.waitAfterConnected) {
-        this.logger.debug(`wait for ${options.waitAfterConnected}s after success load ${options.url}`)
+      if (options.waitAfterConnected && options.useURL === true) {
+        this.logger.debug(`wait for ${options.waitAfterConnected}s after success load ${page.url()}`)
         await new Promise(res => setTimeout(res, options.waitAfterConnected * 1000));
       }
       if(options.useURL === false && options.pageNow === 1){
         const pattern = this.makePattern(options.searchPattern, options.searchPatternType);
+        this.logger.log(`wait for selector`)
         await page.waitForSelector(pattern,{state:"visible"});
+        this.logger.log(`type keyword : ${options.keyword}`)
         await page.type(pattern, options.keyword,{delay:100});
+        this.logger.log(`press enter`)
         await page.$(pattern).then(el => el.press("Enter"))
+        this.logger.log(`wait for page redirect`)
         await page.waitForNavigation({waitUntil:"networkidle"});
+        this.logger.log(`redirected page`)
+        if (options.waitAfterConnected) {
+          this.logger.debug(`wait for ${options.waitAfterConnected}s after success load ${page.url()}`)
+          await new Promise(res => setTimeout(res, options.waitAfterConnected * 1000));
+        }
       }
       const urlNow = page.url();
       const originUrl = cleanOrigin(new URL(urlNow).origin);
       const pContainer = this.makePattern(pattern.containerPattern, pattern.patternType)
-      await page.waitForSelector(pContainer);
+      if(options.waitContainer){
+        this.logger.log(`wait for selector container ${pContainer}`)
+        await page.waitForSelector(pContainer);
+      }
       if ((pattern.fields?.length || 0) < 1) {
         return [[], page];
       }
@@ -76,33 +93,46 @@ export class ScraperPlaywrightService {
         
        try {
          await nodeCon.waitForElementState("stable")
-         if (options.scrollToView) {
-           await nodeCon.scrollIntoViewIfNeeded();
+         const elIsHidden = await nodeCon.isHidden();
+         this.logger.log(`scroll to view : ${options.scrollToView && elIsHidden}`)
+         if (options.scrollToView && elIsHidden) {
+           await nodeCon.evaluate(it => it.scrollIntoView());
          }
-         const item: Record<string, string> = await nodeCon.evaluate((node, fields: PatternField[]) =>
-           fields.reduce((item, field) =>
-             field.patterns.reduce((item, pattern) => {
+         const item: Record<string, string> = await nodeCon.evaluate((node, fields: Array<PatternField & { meta: any }>) =>
+           fields.reduce((item, field) =>{
+
+             const isMultiple = field.meta.multiple === 'true' || false;
+             return field.patterns.reduce((item, pattern) => {
                if (!item[field.key]) {
                  if (field.patternType === "css") {
-                   if (node.querySelector(pattern)) {
-                     item[field.key] = node.querySelector(pattern);
+                   const ncss = node.querySelectorAll(pattern);
+                   if (ncss.length > 0) {
+                     item[field.key] = isMultiple ?ncss: ncss[0];
                    }
                  } else {
                    const vals = document.evaluate(pattern, node, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-                   if (vals.snapshotLength > 0 && vals.snapshotItem(0)) {
-                     item[field.key] = vals.snapshotItem(0)
+                   if (vals.snapshotLength > 0) {
+                     if(isMultiple){
+                       item[field.key] = [];
+                       for (let i = 0; i < vals.snapshotLength; i++) {
+                         item[field.key].push(vals.snapshotItem(i));
+                       }
+                     }else{
+                       item[field.key] = vals.snapshotItem(0)
+                     }
                    }
                  }
                  if (field.returnType === "text" && item[field.key]) {
                    if (field.patternType === "css") {
-                     item[field.key] = item[field.key].textContent;
+                     item[field.key] = isMultiple ? item[field.key].map(nn =>nn.textContent).join('') : item[field.key].textContent;
                    } else {
-                     item[field.key] = item[field.key].nodeValue;
+                     item[field.key] = isMultiple ? item[field.key].map(nn => nn.nodeValue).join('') :item[field.key].nodeValue;
                    }
                  }
                }
                return item;
              }, item)
+           }
              , {})
            , pattern.fields);
          outs.push(item);
@@ -141,7 +171,7 @@ export class ScraperPlaywrightService {
       pageNow:options.pageNow,
     });
     //
-    let x = 1;
+    let x = options.pageNow;
     do {
       try {
         const elLoadMore = await page.$(this.makePattern(options.pattern.containerPattern, options.pattern.patternType));
@@ -162,7 +192,7 @@ export class ScraperPlaywrightService {
         console.error(error);
         break;
       }
-    } while (x < 3);
+    } while (x < options.toPage);
     await page.evaluate(() => window.scrollTo(0, 0));
     // const sh = await page.evaluate(() => document.body.scrollHeight);
     // do {
@@ -192,41 +222,42 @@ export class ScraperPlaywrightService {
   async evaluateWebsiteWithLazyReplace(options: EvaluatePageLazyOptions){
     let products: Record<string, any>[] = [];
     let page: Page;
+    this.logger.log('try to load page');
     [products, page] = await this.evaluateWebsite({
       url: options.url,
       pattern: options.patternProduct,
-      waitAfterConnected: 0,
+      waitAfterConnected: options.waitAfterConnected,
       scrollToView: true,
       useURL: options.useURL,
       searchPatternType: options.searchPatternType,
       searchPattern: options.searchPattern,
       pageNow: options.pageNow,
     });
-    let x = 1;
+    this.logger.log('scraping product first page ');
+    let x = options.pageNow;
     do {
       if (page && !page.isClosed()) {
-        const elLoadMore = await page.$(this.makePattern(options.pattern.containerPattern, options.pattern.patternType));
+        const pageSelector = this.makePattern(options.pattern.containerPattern, options.pattern.patternType);
+        this.logger.log(`wait element next (${pageSelector})`)
+        const elLoadMore = await page.$(pageSelector);
         if (elLoadMore) {
           x++;
-          await elLoadMore.scrollIntoViewIfNeeded();
+          this.logger.log('click element '+pageSelector);
           await elLoadMore.click();
-          try {
-            await page.waitForSelector(this.makePattern(options.pattern.containerPattern, options.pattern.patternType));
-          } catch (error) {
-            break;
-          }
-
         } else {
           break;
         }
         try {
+          this.logger.log('wait network iddle');
           await page.waitForLoadState("networkidle");
+          this.logger.log('wait for first product element');
           await page.waitForSelector(this.makePattern(options.patternProduct.containerPattern, options.patternProduct.patternType), { state: 'attached' });
           let nextProducts: Record<string, any>[] = [];
+          this.logger.log('scraping product on page '+ x);
           [nextProducts, page] = await this.evaluateWebsite({
             page,
             pattern: options.patternProduct,
-            waitAfterConnected: 4,
+            waitAfterConnected: options.waitAfterConnected,
             scrollToView: true,
             pageNow: options.pageNow,
           });
@@ -235,10 +266,11 @@ export class ScraperPlaywrightService {
           console.error(error)
           break;
         }
+      
       } else {
         break;
       }
-    } while (x < 3);
+    } while (x < options.toPage);
     if (page && !page.isClosed() && options.autoClose) {
       await page.close();
     }
