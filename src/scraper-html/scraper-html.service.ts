@@ -10,6 +10,8 @@ import {
 } from '@lib/entities/entities/forum-pattern-post.entity';
 import { isEmpty } from 'class-validator';
 import * as decodeHTML from 'decode-html';
+import { writeFileSync } from 'fs';
+import { resolve } from 'path';
 @Injectable()
 export class ScraperHtmlService {
   logger = new Logger(ScraperHtmlService.name);
@@ -164,6 +166,7 @@ export class ScraperHtmlService {
   ): Promise<{ reply: Record<string, any>[]; pages: ThreadPage<string>[] }> {
     const basePathUrl = new URL(originUrl)?.origin
     //code
+    
     const containerPattern = pattern.find(
       p => p.meta?.isContainer && !p.meta?.isPage,
     );
@@ -173,14 +176,16 @@ export class ScraperHtmlService {
     const fieldPattern = pattern.filter(
       p => !p.meta?.isContainer && !p.meta?.isPage,
     );
+    this.logger.log(`get html data`);
     const { data } = await this.getHTML(originUrl);
     if (!containerPattern || !data) {
       return { reply: [], pages: [] };
     }
+    this.logger.log(`create dom`);
     const dom = this.createDOM(data);
-    const reply = dom
-      .find(containerPattern.pattern)
-      .map((cnode: libxmljs.Node & libxmljs.Document) =>
+    this.logger.log(`try to get content with pattern ${containerPattern.pattern}`);
+    const containerReply = dom.find(containerPattern.pattern);
+    const reply = containerReply.map((cnode: libxmljs.Node & libxmljs.Document) =>
         fieldPattern.reduce((out, pfield) => {
           const xpaths = [pfield.pattern, ...(pfield.meta?.alterPattern || [])];
           const val = xpaths.reduce((pv, xpath) => {
@@ -237,6 +242,11 @@ export class ScraperHtmlService {
   }
 
   createDOM(data: any) {
-    return libxmljs.parseHtml(data);
+    const parseHTML = libxmljs.parseHtml(data);
+    // if (parseHTML.errors.length > 0){
+    //   writeFileSync(resolve('./outs/test.html'), data);
+    //   throw parseHTML.errors.shift();
+    // }
+    return parseHTML;
   }
 }
