@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
+import { SentryModuleAsyncOptions } from '@ntegral/nestjs-sentry';
 
-export const sentryConfig = {
+export const sentryConfig: SentryModuleAsyncOptions = {
   inject: [ConfigService],
   useFactory(cfg: ConfigService) {
     return {

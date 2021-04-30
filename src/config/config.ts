@@ -57,7 +57,7 @@ export const rmqConfig = () => {
     }
   };
 };
-export const ConfigConf = {
+export const defaultConfigOptions = {
   isGlobal: true,
   load: [rmqConfig, database],
   envFilePath: ['.env.prod', '.env.dev', '.env'],
